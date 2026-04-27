@@ -1,0 +1,50 @@
+name: "Artículo Acciones USA — 15h Madrid"
+
+on:
+  schedule:
+    # 13:00 UTC = 15:00 CEST (verano) | 14:00 CET (invierno)
+    # En horario de invierno el artículo saldrá a las 14:00h Madrid.
+    - cron: "0 13 * * 1-5"
+  workflow_dispatch:  # permite lanzar manualmente desde GitHub
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    env:
+      OPENAI_API_KEY:     ${{ secrets.OPENAI_API_KEY }}
+      PERPLEXITY_API_KEY: ${{ secrets.PERPLEXITY_API_KEY }}
+      WP_URL:             ${{ secrets.WP_URL }}
+      WP_USERNAME:        ${{ secrets.WP_USERNAME }}
+      WP_APP_PASSWORD:    ${{ secrets.WP_APP_PASSWORD }}
+      WP_SEO_PLUGIN:      ${{ secrets.WP_SEO_PLUGIN }}
+      WP_CATEGORY_US:     ${{ secrets.WP_CATEGORY_US }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Install virtual display
+        run: sudo apt-get install -y xvfb
+
+      - name: Publish article
+        run: xvfb-run -a python scripts/article_us_stocks.py
+
+      - name: Upload chart artifact (debug)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: chart-us-${{ github.run_id }}
+          path: /tmp/chart_*.png
+          if-no-files-found: ignore
+          retention-days: 3
