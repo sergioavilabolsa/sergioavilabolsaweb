@@ -1,0 +1,113 @@
+{
+  "name": "Market Automation WP Draft Clean",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "sergio-market-automation",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "node-webhook",
+      "name": "Inbound Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        300,
+        300
+      ],
+      "webhookId": "sergio-market-automation"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://sergioavilabolsa.com/wp-json/wp/v2/posts",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpBasicAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"title\": \"AUTO | \" + ($json.template_key || 'manual_test') + \" | \" + $now.format('yyyy-LL-dd HH:mm'),\n  \"status\": \"draft\",\n  \"content\": \"<p><strong>Evento:</strong> \" + ($json.event || 'scheduled') + \"</p><p><strong>Template:</strong> \" + ($json.template_key || 'n/a') + \"</p><p><strong>Timestamp:</strong> \" + ($json.timestamp || '') + \"</p><p><strong>Prompt recibido:</strong></p><pre>\" + (($json.prompt || 'Sin prompt').replace(/</g,'&lt;').replace(/>/g,'&gt;')) + \"</pre>\",\n  \"excerpt\": \"Borrador generado automáticamente desde n8n.\",\n  \"slug\": \"auto-\" + (($json.template_key || 'post').toString().toLowerCase().replace(/[^a-z0-9]+/g,'-')) + \"-\" + $now.format('yyyyLLddHHmmss')\n}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true
+            }
+          }
+        }
+      },
+      "id": "node-create-draft",
+      "name": "Create WP Draft",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        620,
+        300
+      ],
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "WP Basic Auth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\"ok\":true,\"message\":\"draft_created\",\"wp_status\":$json.statusCode || 0,\"wp_post_id\":($json.body && $json.body.id) ? $json.body.id : null}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "node-respond",
+      "name": "Respond 200",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        940,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Inbound Webhook": {
+      "main": [
+        [
+          {
+            "node": "Create WP Draft",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create WP Draft": {
+      "main": [
+        [
+          {
+            "node": "Respond 200",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "1",
+  "meta": {
+    "templateCredsSetupCompleted": false
+  }
+}
